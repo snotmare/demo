@@ -1,6 +1,6 @@
 import * as bodyParser from 'body-parser';
 import { Express, Request, Response } from 'express';
-import { StringUtils, WeatherSearch, ObjectUtils, Degree } from 'shared';
+import { Degree, ObjectUtils, StringUtils, WeatherSearch } from 'shared';
 import * as weather from 'weather-js';
 
 export class WeatherRouter {
@@ -19,10 +19,37 @@ export class WeatherRouter {
 			}
 		});
 	}
-	
+
 	private getWeather(request: Request, response: Response) {
 		let search = <WeatherSearch>request.body;
+		this.validateSearch(search);
 
+		let cityState = search.city + ', ' + search.state;
+
+		// try to respond with the cached result.
+		let cachedResult = this.getCachedResult(search);
+		if (!ObjectUtils.isEmpty(cachedResult)) {
+			return response.json(cachedResult).send;
+		}
+
+		// respond with weather api's result
+		let instance = this;
+		weather.find({search: cityState, degreeType: search.degreeType}, (err: Error, result: any) => {
+			if(err) {
+				throw err;
+			} else {
+				result[0].forecast.forEach((day: any) => {
+					day.imageUrl = result[0].location.imagerelativeurl + 'law/' + day.skycodeday + '.gif';
+				});
+				response.json(result[0]).send;
+
+				// update the cache - no need to slow the request down for this
+				instance.updateCachedResult(search, result[0]);
+			}
+		});
+	}
+
+	private validateSearch(search: WeatherSearch) {
 		if (StringUtils.isEmpty(search.city)) {
 			throw new Error('City is required.');
 		}
@@ -38,59 +65,42 @@ export class WeatherRouter {
 		if(!Object.values(Degree).includes(search.degreeType)) {
 			throw new Error('Degree Type is invalid.');
 		}
-
-		let cityState = search.city + ', ' + search.state;
-
-		let instance = this;
-		let cachedResult = this.getCache(search);
-		if (!ObjectUtils.isEmpty(cachedResult)) {
-			return response.json(cachedResult).send;
-		}
-		
-		// TODO Feel free to promisify. Then use if else and response.json one time, and get rid of instance var.
-		weather.find({search: cityState, degreeType: search.degreeType}, (err: Error, result: any) => {
-			if(err) {
-				console.log(err);
-				response.send('There was a problem getting the weather.');
-			} else {
-				result[0].forecast.forEach((day: any) => {
-					day.imageUrl = result[0].location.imagerelativeurl + 'law/' + day.skycodeday + '.gif';
-				});
-				response.json(result[0]).send;
-				instance.updateCache(search, result[0]);
-			}
-		});
 	}
 
-	private getCache(search: WeatherSearch): any {
+	private getCachedResult(search: WeatherSearch): any {
+		let i = this.findCacheItem(search);
+		if (!ObjectUtils.isEmpty(i)) {
+			if (Date.now() - this.cache.items[i].lastUpdated >= 60000) {
+				return undefined;
+			}
+			return this.cache.items[i].result;
+		}
+		return undefined;
+	}
+
+	private updateCachedResult(search: WeatherSearch, result: any) {
+		let i = this.findCacheItem(search);
+		if (!ObjectUtils.isEmpty(i)) {
+			this.cache.items[i].result = result;
+			this.cache.items[i].lastUpdated = Date.now();
+			return;
+		}
+		this.addCacheItem(search, result);
+	}
+
+	private findCacheItem(search: WeatherSearch): number {
 		for (let i = 0; i < this.cache.items.length; i++) {
 			const cacheItem = this.cache.items[i];
 			if (cacheItem.search.city === search.city
 			&& cacheItem.search.state === search.state
 			&& cacheItem.search.degreeType === search.degreeType) {
-				if (Date.now() - cacheItem.lastUpdated >= 60000) {
-					// item is atleast a minute old, need to retrieve it again
-					return undefined;
-				}
-				return cacheItem.result;
+				return i;
 			}
 		}
 		return undefined;
 	}
 
-	private updateCache(search: WeatherSearch, result: any) {
-		// TODO come up with a better way to loop? Loop the same way in getCache() or better yet create cacheFind()
-		for (let i = 0; i < this.cache.items.length; i++) {
-			const cacheItem = this.cache.items[i];
-			if (cacheItem.search.city === search.city
-			&& cacheItem.search.state === search.state
-			&& cacheItem.search.degreeType === search.degreeType) {
-				cacheItem.result = result;
-				cacheItem.lastUpdated = Date.now();
-				return;
-			}
-		}
-
+	private addCacheItem(search: WeatherSearch, result: any) {
 		let item = new CacheItem();
 		item.search = search;
 		item.result = result;
@@ -99,7 +109,6 @@ export class WeatherRouter {
 	}
 }
 
-// TODO May move these to their own files in server directory
 class Cache {
 	items: CacheItem[];
 }
