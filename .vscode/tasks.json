@@ -43,13 +43,6 @@
 			"problemMatcher": []
 		},
 		{
-			"label": "start client",
-			"type": "npm",
-			"script": "start",
-			"path": "client/",
-			"problemMatcher": []
-		},
-		{
 			"label": "init shared",
 			"type": "npm",
 			"script": "init",
@@ -71,6 +64,7 @@
 			"problemMatcher": []
 		},
 		{
+			"label": "start client",
 			"type": "npm",
 			"script": "start",
 			"path": "client/",

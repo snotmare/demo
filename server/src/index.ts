@@ -12,5 +12,5 @@ app.get('/', function (request: express.Request, response: express.Response) {
 new WeatherRouter(app);
 
 app.listen(3000, () => {
-	console.log('Magic happens on port 3000!');
+	console.log('Magic happens on port 3000');
 });
