@@ -24,10 +24,6 @@ export class WeatherSearchComponent implements OnInit {
 	}
 	
 	private async search(search: WeatherSearch) {
-		this.weather = await this.weatherService.getLocation({
-			city: search.city,
-			state: search.state,
-			degreeType: Degree.FAHRENHEIT
-		}).toPromise();
+		this.weather = await this.weatherService.getLocation(search).toPromise();
 	}
 }
