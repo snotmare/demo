@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
+import { Degree, Weather, WeatherSearch } from 'shared';
 import { WeatherService } from 'src/app/services/weather-service';
-import { Weather, WeatherSearch, Degree, State, DataUtils } from 'shared';
-import { FormGroup, FormControl, Validators } from '@angular/forms';
 
 @Component({
 	selector: 'app-weather-search',
@@ -10,13 +9,8 @@ import { FormGroup, FormControl, Validators } from '@angular/forms';
 })
 export class WeatherSearchComponent implements OnInit {
 	weather: Weather;
-	form: FormGroup;
 
 	constructor(private weatherService: WeatherService) {
-		this.form = new FormGroup({
-			'city': new FormControl(undefined, [Validators.required]),
-			'state': new FormControl(undefined, [Validators.required])
-		});
 	}
 
 	ngOnInit() {
@@ -26,26 +20,13 @@ export class WeatherSearchComponent implements OnInit {
 			degreeType: Degree.FAHRENHEIT
 		};
 
-		this.form.reset(search);
-		this.search();
-	}
-
-	onSubmit() {
-		this.search();
-	}
-
-	get states(): State[] {
-		return DataUtils.states;
+		this.search(search);
 	}
 	
-	private async search() {
-		if(this.form.invalid) {
-			return;
-		}
-
+	private async search(search: WeatherSearch) {
 		this.weather = await this.weatherService.getLocation({
-			city: this.form.value['city'],
-			state: this.form.value['state'],
+			city: search.city,
+			state: search.state,
 			degreeType: Degree.FAHRENHEIT
 		}).toPromise();
 	}

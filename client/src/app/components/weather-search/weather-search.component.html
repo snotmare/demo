@@ -1,21 +1,3 @@
-<form [formGroup]="form" (ngSubmit)="onSubmit()">
-	<mat-form-field>
-		<input matInput placeholder="City" formControlName="city"/>
-		<mat-error *ngIf="form.get('city').invalid">City is required</mat-error>
-	</mat-form-field>
-
-	<mat-form-field>
-		<mat-label>State</mat-label>
-		<mat-select formControlName="state">
-			<mat-option *ngFor="let state of states" [value]="state.code">{{state.name}}</mat-option>
-		</mat-select>
-		<mat-error *ngIf="form.get('state').invalid">State is required</mat-error>
-	</mat-form-field>
-
-	<button mat-flat-button color="primary">Search</button>
-</form>
-
 <div *ngIf="weather">
 	<app-weather [weather]="weather"></app-weather>
-	<app-forecast *ngFor="let forecast of weather.forecast" [forecast]="forecast"></app-forecast>
 </div>
